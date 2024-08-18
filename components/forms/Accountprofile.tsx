@@ -144,7 +144,7 @@ function Accountprofile({ user, btnTitle }: Props) {
           render={({ field }) => (
             <FormItem className="flex items-center gap-3 w-full">
               <FormLabel className="text-base-semibold text-light-2">
-                Bio
+                Biopic
                 </FormLabel>
               <FormControl className="flex-1 text-base-semibold text-gray-200">
                 <Textarea 
