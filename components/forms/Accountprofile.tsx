@@ -1,6 +1,6 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { ChangeEvent } from "react";
+import React, { ChangeEvent, useState } from "react";
 import { Form } from "../ui/form";
 import { useForm } from "react-hook-form";
 import { UserValidation } from "@/lib/validations/user";
@@ -16,6 +16,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
 import Image from "next/image";
+import { Textarea } from "../ui/textarea";
+import { isBase64Image } from "@/lib/utils";
+import { useUploadThing } from "@/lib/uploadthing";
 
 interface Props {
   user: {
@@ -30,23 +33,42 @@ interface Props {
 }
 
 function Accountprofile({ user, btnTitle }: Props) {
+  const[files,setFiles]=useState<File[]>([])
+  const {startUpload}=useUploadThing("media")
   const form = useForm({
     resolver: zodResolver(UserValidation),
     defaultValues: {
-      profile_photo: "",
-      name: "",
-      username: "",
-      bio: "",
+      profile_photo:user?.image|| "",
+      name:user?.name|| "",
+      username: user?.username||"",
+      bio:user?.bio || "",
     },
   });
-  const handleImage=(e:ChangeEvent,fieldChange:(value:string)=>void)=>{
-      e.preventDefault()
+  const handleImage=(e:ChangeEvent<HTMLInputElement>,fieldChange:
+    (value:string)=>void)=>{
+      e.preventDefault();
+      const filereader=new FileReader();
+      if(e.target.files && e.target.files.length>0){
+           const file=e.target.files[0];
+           setFiles(Array.from(e.target.files))
+           if(!file.type.includes('image'))return;
+           filereader.onload=async(event)=>{
+            const imgdataurl=event.target?.result?.toString()||'';
+            fieldChange(imgdataurl)
+           }
+          filereader.readAsDataURL(file)  
+      }
   }
 
-  function onSubmit(values: z.infer<typeof UserValidation>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values);
+  const  onSubmit=async(values: z.infer<typeof UserValidation>)=> {
+    const blob=values.profile_photo;
+    const hasImagechanged=isBase64Image(blob)
+    if(hasImagechanged){
+       const imgRes=await startUpload(files)
+       if(imgRes && imgRes[0].url){
+        values.profile_photo =imgRes[0].url;
+       }
+    }
   }
 
   return (
@@ -102,11 +124,11 @@ function Accountprofile({ user, btnTitle }: Props) {
           control={form.control}
           name="name"
           render={({ field }) => (
-            <FormItem className="flex items-center gap-3 w-full">
+            <FormItem className="flex flex-col gap-3 w-full">
               <FormLabel className="text-base-semibold text-light-2">
                 Name
                 </FormLabel>
-              <FormControl className="flex-1 text-base-semibold text-gray-200">
+              <FormControl >
                 <Input 
                 type="text"
                 className="account-form_input no-focus"
@@ -122,11 +144,11 @@ function Accountprofile({ user, btnTitle }: Props) {
           control={form.control}
           name="username"
           render={({ field }) => (
-            <FormItem className="flex items-center gap-3 w-full">
+            <FormItem className="flex flex-col gap-3 w-full">
               <FormLabel className="text-base-semibold text-light-2">
                 Username
                 </FormLabel>
-              <FormControl className="flex-1 text-base-semibold text-gray-200">
+              <FormControl >
                 <Input 
                 type="text"
                 className="account-form_input no-focus"
@@ -142,13 +164,13 @@ function Accountprofile({ user, btnTitle }: Props) {
           control={form.control}
           name="bio"
           render={({ field }) => (
-            <FormItem className="flex items-center gap-3 w-full">
-              <FormLabel className="text-base-semibold text-light-2">
-                Biopic
-                </FormLabel>
-              <FormControl className="flex-1 text-base-semibold text-gray-200">
+            <FormItem className="flex flex-col gap-3 w-full">
+            <FormLabel className="text-base-semibold text-light-2">
+              Bio
+              </FormLabel>
+            <FormControl >
                 <Textarea 
-               rows
+                rows={10}
                 className="account-form_input no-focus"
                 
                 {...field}
@@ -158,7 +180,7 @@ function Accountprofile({ user, btnTitle }: Props) {
             </FormItem>
           )}
         />
-        <Button type="submit">Submit</Button>
+        <Button type="submit" className="bg-primary-500">Submit</Button>
       </form>
     </Form>
   );
